@@ -1,22 +1,27 @@
 # 🎨 Instagram 클론 프론트엔드 명세서 (front.md)
 
-본 문서는 React와 Vite를 기반으로 하는 Instagram 웹 애플리케이션의 사용자 인터페이스(UI), 사용자 경험(UX), 상태 관리, 컴포넌트 아키텍처 및 클라이언트 통신 명세서입니다.
+본 문서는 React와 Vite를 기반으로 하는 Instagram 웹 애플리케이션의 사용자 인터페이스(UI), 사용자 경험(UX), 상태 관리, 컴포넌트 아키텍처 명세서입니다.
+
+> **현재 연동 상태 (2026-10-07 기준)**: 프론트엔드는 `backend.md`에서 설명하는 FastAPI 서버와 **아직 연동되어 있지 않다.** 모든 화면은 `src/mock/initialData.ts`의 정적 목(mock) 데이터를 `Zustand` 스토어에 그대로 올려 동작하며, 좋아요·댓글·북마크·새 게시물 등 모든 상호작용은 브라우저 메모리에서만 상태를 바꾼다. 새로고침하면 초기 목 데이터로 되돌아간다. 로그인(`LoginPage`)도 실제 인증 요청 없이 `mock/initialData.ts`의 `TEST_CREDENTIALS`와 입력값을 비교해 통과시키고, 토큰 자리에는 고정 문자열 `'mock-jwt-token-xyz'`를 넣는다. `axios`가 `package.json` 의존성에는 있지만 코드에서 실제로 `import`해 쓰는 곳은 없다. 백엔드 API와 실제로 통신하도록 교체하는 작업(Axios 인스턴스, API 훅, 로그인/피드/업로드 연동 등)은 아직 하지 않았다.
 
 ---
 
 ## 1. 프론트엔드 기술 스택
 
-| 분류 | 기술 / 라이브러리 | 버전 | 목적 |
+| 분류 | 기술 / 라이브러리 | 실제 버전(`package.json`) | 목적 |
 | :--- | :--- | :--- | :--- |
-| **Core Framework** | React + TypeScript (또는 JS) | 18.2+ | UI 렌더링 및 컴포넌트 로직 |
-| **Bundler & Tooling**| Vite | 5.0+ | 초고속 HMR 및 최적화 빌드 |
-| **Routing** | React Router DOM | v6.20+ | 클라이언트 사이드 라우팅 및 중첩 라우트 |
-| **Styling** | Tailwind CSS + Vanilla CSS | 3.4+ | 유틸리티 스타일링 및 커스텀 애니메이션 |
-| **Server State** | TanStack Query (React Query) | v5.0+ | 서버 캐싱, 무한 스크롤, 낙관적 업데이트 |
-| **Client State** | Zustand | 4.5+ | 인증 상태, 글로벌 모달, 알림 토스트 관리 |
-| **HTTP Client** | Axios | 1.6+ | API 요청 및 JWT 토큰 인터셉터 |
-| **Icons** | Lucide React | 0.300+ | Instagram 스타일 모던 라인 아이콘 셋 |
-| **Image & Date** | date-fns | 3.0+ | 상대 시간 표기 ("방금 전", "3시간 전") |
+| **Core Framework** | React + TypeScript | 19.2 / TS 6.0 | UI 렌더링 및 컴포넌트 로직 |
+| **Bundler & Tooling**| Vite | 8.3 | HMR 및 프로덕션 빌드 (Node 20+ 필요) |
+| **Routing** | React Router DOM | 7.18 | 클라이언트 사이드 라우팅 |
+| **Styling** | Tailwind CSS 4 (`@tailwindcss/postcss`) + Vanilla CSS | 4.3 | 유틸리티 스타일링 및 커스텀 애니메이션 |
+| **Client State** | Zustand (+ `persist` 미들웨어) | 5.0 | 인증·모달·게시물·설정 상태를 전부 로컬에서 관리 |
+| **Icons** | Lucide React | 1.50 | Instagram 스타일 모던 라인 아이콘 셋 |
+| **Date** | date-fns | 4.4 | 상대 시간 표기 ("방금 전", "3시간 전") |
+| **기타** | clsx | 2.1 | 조건부 클래스네임 조합 |
+| **설치되어 있으나 미사용** | axios | 1.20 | 의존성에만 존재, 실제 API 호출 코드 없음 |
+| **Lint** | oxlint | 1.81 | `npm run lint` |
+
+TanStack Query, WebSocket 클라이언트는 설치되어 있지 않다. 서버 캐싱이나 실시간 통신은 구현되지 않았다.
 
 ---
 
@@ -84,20 +89,35 @@ graph TD
 
 ## 4. 라우팅 및 페이지 구조 (Routes)
 
+실제 `App.tsx`에 등록된 라우트는 다음과 같다. 스토리 뷰어·게시물 상세·저장됨/태그됨 탭은 별도 경로가 아니라 `useModalStore`의 상태 또는 페이지 내부 탭 전환으로 처리한다.
+
 ```
 /
-├── /login                    # 로그인 페이지 (인스타그램 폰 목업 애니메이션)
-├── /signup                   # 회원가입 페이지
-├── /                         # 메인 홈 피드 (보호된 라우트)
-├── /explore                  # 탐색 페이지 (그리드 피드)
-├── /direct/inbox             # DM 대화방 메인 목록
-├── /direct/t/:roomId         # 특정 대화방 채팅 화면
-├── /:username                # 유저 프로필 페이지
-│   ├── /:username/saved      # (본인 전용) 저장된 게시물 탭
-│   └── /:username/tagged     # 태그된 게시물 탭
-├── /p/:postId                # 게시물 단독 상세 페이지 (URL 직접 접근 시)
-└── /stories/:username/:id    # 전체 화면 스토리 뷰어
+├── /login                           # 로그인 페이지 (비인증 시에만)
+├── /signup                          # 회원가입 페이지
+├── /                                # 메인 홈 피드 (인증 필요)
+├── /explore                         # 탐색 페이지 (그리드 피드)
+├── /direct                          # 다이렉트 메시지 (목록 + 대화창 한 화면)
+├── /p/:postId                       # 게시물 상세 — HomePage를 그대로 렌더링하고 모달로 오버레이
+├── /:username                       # 유저 프로필 페이지 (게시물/저장됨/태그됨은 페이지 내부 탭)
+└── /settings                        # 설정 루트
+    ├── /settings/password           # 비밀번호 변경
+    ├── /settings/contact            # 연락처 정보
+    ├── /settings/account-privacy    # 계정 공개 범위
+    ├── /settings/switch             # 계정 전환 (UI만, API 없음)
+    ├── /settings/deactivate         # 계정 비활성화
+    ├── /settings/archive            # 보관함
+    ├── /settings/download           # 내 정보 다운로드
+    ├── /settings/hide-likes         # 좋아요 수 숨김 기본값
+    ├── /settings/language           # 언어
+    ├── /settings/theme              # 테마(다크/라이트)
+    ├── /settings/accessibility      # 모션 줄이기 등
+    ├── /settings/help               # 고객센터
+    ├── /settings/privacy-policy     # 개인정보처리방침
+    └── /settings/terms              # 약관
 ```
+
+스토리 뷰어는 라우트 전환 없이 `useModalStore.activeStoryGroup`을 채워 풀스크린 모달로 띄운다.
 
 ---
 
@@ -169,7 +189,9 @@ graph TD
 
 ## 6. 전역 상태 관리 (Zustand Stores)
 
-### 6.1. `useAuthStore`
+네 개의 독립 스토어가 있다. `useAuthStore`와 `useSettingsStore`는 `persist` 미들웨어로 `localStorage`에 저장되고, `useModalStore`와 `usePostStore`는 저장하지 않는다 (새로고침 시 `usePostStore`는 `mock/initialData.ts`로 초기화된다).
+
+### 6.1. `useAuthStore` (`store/useAuthStore.ts`, localStorage 키 `ig-auth`)
 ```typescript
 interface AuthState {
   user: User | null;
@@ -180,50 +202,63 @@ interface AuthState {
   updateUser: (updatedUser: Partial<User>) => void;
 }
 ```
+`setAuth`는 토큰을 `localStorage`의 `access_token` 키에도 별도로 저장한다. 실제로는 서버 토큰이 아니라 `LoginPage`가 넘기는 고정 문자열이 들어간다.
 
-### 6.2. `useModalStore`
-게시물 작성, 게시물 상세, 팔로워 목록, 설정 모달 등의 열림 상태를 중앙에서 관리하여 불필요한 prop drilling 방지:
+### 6.2. `useModalStore` (`store/useModalStore.ts`)
 ```typescript
 interface ModalState {
   isCreatePostOpen: boolean;
   selectedPostId: number | null;
-  activeFollowModal: { type: 'followers' | 'following'; username: string } | null;
+  activeStoryGroup: StoryGroup | null;
+  isSearchOpen: boolean;
+  isNotificationsOpen: boolean;
   openCreatePost: () => void;
   closeCreatePost: () => void;
   openPostDetail: (postId: number) => void;
   closePostDetail: () => void;
+  openStoryViewer: (group: StoryGroup) => void;
+  closeStoryViewer: () => void;
+  toggleSearch: () => void;
+  closeSearch: () => void;
+  toggleNotifications: () => void;
+  closeNotifications: () => void;
+  closeAllDrawers: () => void;
 }
 ```
 
+### 6.3. `usePostStore` (`store/usePostStore.ts`)
+피드, 스토리, 알림, 채팅방을 모두 담는 가장 큰 스토어. 초기값은 `mock/initialData.ts`의 `initialPosts`, `initialStories`, `initialNotifications`, `initialChatRooms`다. `toggleLike`, `toggleBookmark`, `addComment`, `toggleCommentLike`, `createPost`, `markStoryAsSeen`, `markAllNotificationsAsRead`, `markNotificationAsRead`, `setActiveChatRoom`, `sendMessage`가 전부 네트워크 요청 없이 로컬 배열을 직접 변형한다. 예를 들어 `createPost`는 첨부된 이미지를 서버에 업로드하지 않고 브라우저가 만든 로컬 URL/배열을 그대로 `posts` 앞에 추가한다.
+
+### 6.4. `useSettingsStore` (`store/useSettingsStore.ts`, localStorage 키 `ig-settings`)
+언어, 테마(다크/라이트, `<html>`에 `theme-light` 클래스 토글), 모션 줄이기, 공개 범위, 태그/멘션 허용 범위, 알림(푸시/이메일) 토글, 차단·제한 사용자 목록, 내 정보 다운로드 요청 시각 등 설정 화면 전체 상태를 보관한다. 전부 클라이언트 전역 상태일 뿐 서버에 반영되지 않는다.
+
 ---
 
-## 7. API 클라이언트 및 TanStack Query 전략
+## 7. 데이터 흐름 (현재: Mock 기반, 백엔드 미연동)
 
-### 7.1. Axios Interceptor
-- 요청 시 `localStorage`에 저장된 `access_token`을 `Authorization: Bearer <token>` 헤더에 자동 추가.
-- `401 Unauthorized` 에러 발생 시 자동 로그아웃 처리 및 `/login` 리다이렉트.
+현재 구조에는 Axios 인터셉터나 TanStack Query 캐시 전략이 없다. 모든 "낙관적 업데이트처럼 보이는" 즉각 반응은 사실 네트워크 요청 자체가 없기 때문에 즉시 반영되는 것이다.
 
-### 7.2. 낙관적 업데이트 (Optimistic Updates - 좋아요 기능 예시)
-네트워크 응답을 기다리지 않고 사용자가 하트를 누르는 순간 UI의 하트 상태와 카운트를 즉시 반전시켜 네이티브 앱 수준의 즉각적인 사용자 반응성을 제공합니다.
+### 7.1. 좋아요 토글 (`usePostStore.toggleLike`) 예시
 ```typescript
-const useToggleLike = (postId: number) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: () => api.post(`/posts/${postId}/like`),
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ['posts'] });
-      const previousFeed = queryClient.getQueryData(['posts']);
-      // 캐시 데이터에서 해당 postId의 is_liked와 like_count를 즉시 변경
-      queryClient.setQueryData(['posts'], (old: any) => updateLikeInCache(old, postId));
-      return { previousFeed };
-    },
-    onError: (err, variables, context) => {
-      // 실패 시 이전 상태로 롤백
-      if (context?.previousFeed) {
-        queryClient.setQueryData(['posts'], context.previousFeed);
-      }
-    },
-  });
-};
+toggleLike: (postId) => {
+  set((state) => ({
+    posts: state.posts.map((post) =>
+      post.id === postId
+        ? {
+            ...post,
+            is_liked: !post.is_liked,
+            like_count: post.is_liked ? post.like_count - 1 : post.like_count + 1,
+          }
+        : post
+    ),
+  }));
+},
 ```
+
+### 7.2. 백엔드 연동 시 해야 할 일 (아직 미착수)
+`backend.md`의 API(`/api/v1/...`)를 실제로 호출하려면 최소한 다음이 필요하다:
+1. `axios` 인스턴스 생성 + `Authorization: Bearer <token>` 인터셉터, `401` 시 `useAuthStore.logout()` + `/login` 리다이렉트.
+2. `LoginPage`/`SignupPage`를 `POST /auth/login`, `POST /auth/signup` 실제 호출로 교체.
+3. `usePostStore`의 각 액션을 해당 REST 엔드포인트 호출 + 응답 반영으로 교체 (현재는 전부 로컬 변형).
+4. 서버 캐싱/리페칭이 필요하면 TanStack Query 등 서버 상태 라이브러리 추가 설치.
+5. `.env`의 `VITE_API_BASE_URL`, `VITE_STATIC_BASE_URL`은 이미 프로덕션 도메인(`https://tripastay.com`)으로 설정되어 있으므로, 연동 코드만 추가하면 됨.

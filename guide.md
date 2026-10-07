@@ -1,6 +1,11 @@
 # 📘 Instagram 클론 전체 프로젝트 가이드 (guide.md)
 
-본 문서는 **React (Frontend)** + **FastAPI (Backend)** + **SQLite (Database)** 기술 스택을 활용한 완전한 기능의 Instagram 웹 애플리케이션 개발, 실행, 시딩 및 단계별 로드맵을 제공하는 마스터 가이드입니다.
+본 문서는 **React (Frontend)** + **FastAPI (Backend)** + **SQLite (Database)** 기술 스택을 활용한 Instagram 웹 애플리케이션의 로컬 개발 환경 구성, 프로덕션 배포, 현재 구현 범위를 정리한 마스터 가이드입니다.
+
+> **현재 상태 요약 (2026-10-07)**
+> - 백엔드: `backend.md`에 정리된 REST API가 전부 구현되어 있고, `https://tripastay.com`에 실제로 배포되어 정상 동작 중이다.
+> - 프론트엔드: UI는 전부 구현되어 있지만 **백엔드 API를 호출하지 않는다.** `frontend/src/mock/initialData.ts`의 목 데이터를 Zustand 스토어에 올려 화면을 채우고, 로그인도 하드코딩된 테스트 계정 비교로만 통과한다 (`front.md` 참고). 아래 로드맵(6장)의 각 Phase 항목들은 "화면과 서버 API가 각각 구현됐다"는 뜻이고, "화면이 그 API를 실제로 호출한다"는 뜻이 아니다.
+> - 배포 환경: AWS 계열 EC2(Amazon Linux 2023), nginx + Let's Encrypt(Certbot) 인증서가 이미 구성되어 있던 서버에 백엔드(systemd)와 프론트엔드(정적 빌드)를 올렸다.
 
 ---
 
@@ -93,9 +98,9 @@ my_instagram/
 ## 3. 사전 요구사항 및 환경 준비
 
 ### 3.1. 필수 설치 항목
-- **Python**: 3.10 이상 (3.11 권장)
-- **Node.js**: 18.0.0 이상 (LTS 권장)
-- **npm** (또는 pnpm / yarn)
+- **Python 3.10+** — 단, `backend/app/core/deps.py` 등에서 `X | None` (PEP 604) 타입 문법을 실제 런타임에 평가하므로 **3.10 미만에서는 임포트 시점에 `TypeError`로 바로 죽는다.** 배포 서버의 시스템 기본 Python이 3.9였던 탓에 겪은 문제라, 3.10 미만이면 반드시 3.11 등을 별도로 설치해서 venv를 그걸로 만들어야 한다.
+- **Node.js 20 이상** — `package.json`의 `vite@8`, `rolldown`이 Node 18 이하에서 `node:util`의 `styleText` 미지원으로 빌드 시 `SyntaxError`를 낸다. Node 18 LTS로는 `npm run build`가 실패한다.
+- **npm** (프로젝트는 npm 기준. `package-lock.json` 있음)
 - **Git**
 
 ---
@@ -125,7 +130,7 @@ my_instagram/
    pip install -r requirements.txt
    ```
 
-   > **주요 requirements.txt 내용**:
+   > **실제 requirements.txt 내용**:
    > ```text
    > fastapi>=0.110.0
    > uvicorn[standard]>=0.28.0
@@ -133,28 +138,31 @@ my_instagram/
    > pydantic>=2.6.4
    > pydantic-settings>=2.2.1
    > python-jose[cryptography]>=3.3.0
-   > passlib[bcrypt]>=1.7.4
+   > bcrypt>=4.0.0
    > python-multipart>=0.0.9
    > Pillow>=10.2.0
    > websockets>=12.0
+   > email-validator>=2.0.0
    > alembic>=1.13.1
    > ```
+   > `passlib`는 쓰지 않는다 — 비밀번호 해싱은 `app/core/security.py`에서 `bcrypt` 패키지를 직접 호출한다 (`bcrypt.hashpw` / `bcrypt.checkpw`, 72바이트 컷). `websockets`는 의존성에 있지만 실제 WebSocket 엔드포인트는 구현되어 있지 않다(다이렉트 메시지는 REST 폴링 방식).
 
-4. **환경 변수 파일 생성 (`backend/.env`)**:
+4. **환경 변수 파일 생성 (`backend/.env`, `backend/.env.example` 복사)**:
    ```env
    PROJECT_NAME="Instagram Clone"
-   SECRET_KEY="generate-a-secure-random-secret-key-here"
+   SECRET_KEY="instagram-clone-super-secret-key-change-in-production"
    ALGORITHM="HS256"
    ACCESS_TOKEN_EXPIRE_MINUTES=120
    DATABASE_URL="sqlite:///./instagram.db"
    ALLOWED_ORIGINS="http://localhost:5173,http://127.0.0.1:5173"
    ```
+   `SECRET_KEY`를 비워두면 `app/core/config.py`의 하드코딩된 기본값(위 예시와 동일한 문자열)이 그대로 쓰인다 — 로컬 개발은 괜찮지만 **운영 환경에서는 반드시 랜덤 값으로 교체**해야 한다(7장 프로덕션 배포 참고). `ACCESS_TOKEN_EXPIRE_MINUTES`를 설정하지 않으면 코드 기본값은 7일(`60*24*7`)이다.
 
 5. **마이그레이션 적용 및 시딩 실행**:
    ```bash
    python seed.py
    ```
-   *(이 스크립트는 Alembic으로 테이블·트리거를 만든 뒤 테스트용 계정, 게시물, 댓글 데이터를 채웁니다. 서버를 켤 때도 아직 적용되지 않은 마이그레이션이 실행됩니다.)*
+   *(이 스크립트는 기존 테이블과 `alembic_version`을 지운 뒤 `alembic upgrade head`로 스키마를 다시 만들고, 테스트용 계정·게시물·댓글·스토리·알림·대화방 데이터를 채웁니다. `seed.py`를 돌리지 않아도 서버를 켤 때 `main.py`의 `init_db()`가 아직 적용 안 된 마이그레이션은 실행하지만, 시드 데이터는 넣지 않습니다.)*
 
 6. **FastAPI 서버 구동**:
    ```bash
@@ -177,19 +185,21 @@ my_instagram/
    npm install
    ```
 
-   > **주요 package.json 의존성**:
+   > **실제 package.json 의존성** (`@tanstack/react-query` 없음, `axios`는 설치만 되어 있고 미사용 — `front.md` 참고):
    > ```json
    > "dependencies": {
-   >   "react": "^18.2.0",
-   >   "react-dom": "^18.2.0",
-   >   "react-router-dom": "^6.22.0",
-   >   "@tanstack/react-query": "^5.25.0",
-   >   "zustand": "^4.5.2",
-   >   "axios": "^1.6.7",
-   >   "lucide-react": "^0.354.0",
-   >   "date-fns": "^3.3.1"
+   >   "react": "^19.2.8",
+   >   "react-dom": "^19.2.8",
+   >   "react-router-dom": "^7.18.4",
+   >   "zustand": "^5.0.15",
+   >   "axios": "^1.20.0",
+   >   "lucide-react": "^1.50.0",
+   >   "date-fns": "^4.4.0",
+   >   "clsx": "^2.1.1",
+   >   "tailwindcss": "^4.3.3"
    > }
    > ```
+   > `vite@^8.3.0`과 `rolldown`은 **Node.js 20 이상**이 필요하다 (3.1절 참고). Node 18에서 `npm run build`를 실행하면 `node:util`의 `styleText` 미지원으로 빌드가 실패한다.
 
 3. **환경 변수 파일 생성 (`frontend/.env`)**:
    ```env
@@ -208,19 +218,22 @@ my_instagram/
 
 ## 5. 더미 데이터 시딩 스크립트 가이드 (`seed.py`)
 
-초기 개발 및 테스트가 편리하도록 기본 샘플 계정과 피드가 즉시 제공됩니다.
+`backend/seed.py`는 기존 테이블을 지우고 `alembic upgrade head`로 스키마를 다시 만든 뒤, 프론트 `mock/initialData.ts`와 동일한 사용자·게시물·댓글·스토리·알림·대화방 데이터를 넣는다. 기본 키 값도 목 데이터와 맞춘다(비밀번호는 전부 bcrypt 해시로 다시 저장).
 
-### 기본 테스트 계정:
-- **계정 1**: `admin` / `password123!` (풀네임: Instagram 관리자)
-- **계정 2**: `traveler_june` / `password123!` (풀네임: 여행가 준)
-- **계정 3**: `design_sarah` / `password123!` (풀네임: 디자이너 사라)
+### 실제 시드 계정 (전부 비밀번호 `12345`):
+- **테스트 계정**: 이메일 `test@gmail.com` / 아이디 `test` / 비밀번호 `12345` — `/docs`로 API를 직접 테스트할 때 쓰는 계정 (id=7)
+- `traveler_june` (`june@example.com`), `design_sarah` (`sarah@example.com`), `foodie_min` (`min@example.com`), `art_minji` (`minji@example.com`), `coder_kim` (`kim@example.com`)
+
+> `admin` / `password123!` 같은 계정은 **존재하지 않는다.** 위 계정만 실제로 시드된다. 자세한 팔로우/좋아요/알림/대화방 초기 상태는 `backend.md` 6장 참고.
 
 `seed.py` 실행 시:
-1. `users` 3명 이상 등록
-2. 각 유저 간의 팔로우 관계 자동 생성
-3. 2~3장의 다중 미디어를 포함한 샘플 게시물 6개 이상 자동 등록
-4. 댓글 및 대댓글, 좋아요 데이터 자동 등록
-5. 24시간 이내의 샘플 스토리 2건 등록
+1. `users` 6명 등록 (위 6개 계정)
+2. `test` ↔ `traveler_june`, `design_sarah` 팔로우, `art_minji` → `test` 팔로우(팔로우 알림 포함)
+3. 다중 이미지 게시물과 좋아요·댓글·북마크 데이터 등록
+4. 24시간 이내 만료되는 스토리와 열람 기록 1건 등록
+5. 1:1 대화방 3개와 메시지 등록
+
+**프론트는 아직 이 데이터를 읽지 않는다** — `seed.py`를 실행해도 브라우저 화면은 바뀌지 않는다. 화면은 `frontend/src/mock/initialData.ts`만 본다. `seed.py`가 만든 데이터는 `/docs`(Swagger)나 `curl`로 API를 직접 두드려야 확인할 수 있다.
 
 ---
 
@@ -273,16 +286,120 @@ timeline
 - [ ] 프론트엔드: 풀스크린 스토리 뷰어 모달 (5초 자동 프로그레스 바 타이머, 좌우 클릭 전환).
 - [ ] 프론트엔드: 알림 팝오버 드롭다운 및 읽음 처리.
 
-### [Phase 6] 실시간 다이렉트 메시지 (DM & WebSocket)
-- [ ] 백엔드: `chat_rooms`, `messages` 모델 구축.
-- [ ] 백엔드: WebSocket 엔드포인트(`/ws/chat/{room_id}`) 및 `ConnectionManager` 구현.
-- [ ] 프론트엔드: DM 페이지(`/direct`) 좌측 대화 목록 + 우측 대화창.
-- [ ] 프론트엔드: WebSocket 연결을 통한 실시간 메시지 송수신 및 자동 스크롤 다운.
-- [ ] 통합 테스트 및 다크모드/반응형 세부 디테일 폴리싱.
+### [Phase 6] 다이렉트 메시지 (DM)
+- [x] 백엔드: `chat_rooms`, `chat_participants`, `messages` 모델 구축 (구현 완료).
+- [x] 백엔드: ~~WebSocket 엔드포인트~~ → **REST 폴링 방식으로 변경**. `backend.md` 1.3절 결정에 따라 WebSocket, `ConnectionManager`는 만들지 않았고 `GET/POST /chats/rooms/{id}/messages`로 요청마다 저장·조회한다.
+- [ ] 프론트엔드: DM 페이지(`/direct`)는 UI만 존재하고 `usePostStore`의 목 데이터로 동작 — 백엔드 REST 연동 전.
+- [x] 통합 테스트 및 다크모드/반응형 세부 디테일 폴리싱 — UI 완료.
+
+> 위 체크박스는 "백엔드 API 구현 여부"만 나타낸다. 프론트엔드가 실제로 그 API를 호출하는 Phase는 아직 없다 (front.md 참고).
 
 ---
 
-## 7. 핵심 개발 주의사항 및 팁
+## 7. 프로덕션 배포 가이드 (`https://tripastay.com`, 2026-10-07 기준)
+
+이미 nginx + Certbot(Let's Encrypt) SSL이 구성된 Amazon Linux 2023 EC2 서버(`/var/www/tripastay.com` = 이 저장소의 clone)에 실제로 배포한 절차다.
+
+### 7.1. 런타임 준비
+```bash
+# 시스템 기본 Python 3.9는 deps.py의 `X | None` 문법을 지원 못해 3.11을 별도 설치
+sudo dnf install -y python3.11 python3.11-pip python3.11-devel
+# 시스템 기본 Node 18은 Vite 8을 못 빌드하므로 20을 추가 설치 후 기본값 전환
+sudo dnf install -y nodejs20 nodejs20-npm
+sudo alternatives --set node /usr/bin/node-20
+```
+
+### 7.2. 백엔드
+```bash
+cd backend
+python3.11 -m venv venv
+venv/bin/pip install -r requirements.txt
+
+# .env — SECRET_KEY는 매번 새로 생성, ALLOWED_ORIGINS는 실제 도메인
+cat > .env <<EOF
+PROJECT_NAME="Instagram Clone"
+SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
+ALGORITHM="HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES=120
+DATABASE_URL="sqlite:////var/www/tripastay.com/backend/instagram.db"
+ALLOWED_ORIGINS="https://tripastay.com,https://www.tripastay.com"
+EOF
+
+venv/bin/alembic upgrade head
+```
+
+systemd 서비스로 등록 (`/etc/systemd/system/instagram-clone-backend.service`):
+```ini
+[Unit]
+Description=Instagram Clone FastAPI backend
+After=network.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/var/www/tripastay.com/backend
+ExecStart=/var/www/tripastay.com/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now instagram-clone-backend
+```
+127.0.0.1:8000에서만 열어두고, 외부에는 nginx를 통해서만 노출한다.
+
+### 7.3. 프론트엔드
+```bash
+cd frontend
+cat > .env <<EOF
+VITE_API_BASE_URL=https://tripastay.com/api/v1
+VITE_STATIC_BASE_URL=https://tripastay.com
+VITE_WS_BASE_URL=wss://tripastay.com/ws
+EOF
+npm install
+npm run build   # frontend/dist 생성 (Node 20 필요)
+```
+
+### 7.4. nginx (`/etc/nginx/conf.d/tripastay.com.conf`)
+기존 Certbot이 관리하는 SSL 블록은 그대로 두고, `root`와 프록시 위치만 추가한다.
+```nginx
+root /var/www/tripastay.com/frontend/dist;
+index index.html;
+
+location / {
+    try_files $uri $uri/ /index.html;   # SPA 라우팅 폴백
+}
+location /api/ {
+    proxy_pass http://127.0.0.1:8000/api/;
+    proxy_set_header Host $host;
+}
+location /uploads/ { proxy_pass http://127.0.0.1:8000/uploads/; }
+location /static/  { proxy_pass http://127.0.0.1:8000/static/; }
+location ~ ^/(docs|redoc|openapi.json|health)$ {
+    proxy_pass http://127.0.0.1:8000;
+}
+```
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### 7.5. 배포 후 확인
+```bash
+curl -s https://tripastay.com/health                 # {"status":"ok",...}
+curl -s -o /dev/null -w "%{http_code}\n" https://tripastay.com/docs   # 200
+curl -s https://tripastay.com/ | grep -o "<title>.*</title>"          # <title>Instagram</title>
+```
+브라우저에서 바뀐 게 안 보이면 거의 항상 **브라우저 캐시** 문제다 — 시크릿 창이나 하드 리프레시(`Ctrl+Shift+R`)로 먼저 확인한다.
+
+### 7.6. 다음 단계 (아직 안 함)
+배포는 프론트 UI와 백엔드 API를 "같은 서버에 각자" 올려둔 상태다. 실제로 로그인/피드/업로드가 되게 하려면 `front.md` 7.2절의 프론트-백엔드 연동 작업이 필요하다.
+
+---
+
+## 8. 핵심 개발 주의사항 및 팁
 
 1. **SQLite 외래 키 활성화**:
    - SQLite는 기본적으로 외래키 체크가 꺼져 있으므로 SQLAlchemy 엔진 연결 시 `PRAGMA foreign_keys=ON;`을 반드시 걸어야 합니다.

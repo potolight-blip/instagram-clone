@@ -5,6 +5,15 @@
 
 프론트는 React + Vite이며, 지금은 Zustand 목 데이터로 동작한다. 백엔드는 그 화면이 읽는 필드와 누르는 동작만 제공한다.
 
+> **연동 상태 (2026-10-07)**: 이 문서가 설명하는 API는 전부 구현되어 프로덕션에 배포되어 있지만, 현재 `frontend/`는 이 API를 호출하지 않는다. 프론트는 `src/mock/initialData.ts` 목 데이터로만 동작한다 (`front.md` 참고). API는 `curl`/`/docs`(Swagger)로만 검증된 상태다.
+
+> **프로덕션 배포 현황 (2026-10-07)**: `https://tripastay.com`에 배포됨.
+> - 실행 환경: Python **3.11** venv(`backend/venv`). 시스템 기본 Python은 3.9라 `deps.py` 등의 `X | None` 문법(PEP 604)을 지원하지 못해 3.11을 별도 설치했다.
+> - 프로세스: systemd 서비스 `instagram-clone-backend` (`/etc/systemd/system/instagram-clone-backend.service`), `uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2`로 상시 구동, 장애 시 자동 재시작.
+> - 리버스 프록시: nginx(`/etc/nginx/conf.d/tripastay.com.conf`)가 `/api/`, `/uploads/`, `/static/`, `/docs`, `/redoc`, `/openapi.json`, `/health`을 `127.0.0.1:8000`으로 프록시. SSL은 기존 Certbot 인증서 사용.
+> - `backend/.env`의 `ALLOWED_ORIGINS`는 `https://tripastay.com,https://www.tripastay.com`. 다만 프론트와 백엔드가 같은 도메인으로 묶여 있어 현재는 CORS가 실제로 걸릴 일이 없다(프론트가 아직 호출을 안 하므로).
+> - DB 파일: `/var/www/tripastay.com/backend/instagram.db` (SQLite), `alembic upgrade head`로 생성.
+
 ---
 
 ## 1. 범위

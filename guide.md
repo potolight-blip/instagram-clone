@@ -1,6 +1,6 @@
 # 📘 Instagram 클론 전체 프로젝트 가이드 (guide.md)
 
-본 문서는 **React (Frontend)** + **FastAPI (Backend)** + **SQLite (Database)** 기술 스택을 활용한 Instagram 웹 애플리케이션의 로컬 개발 환경 구성, 프로덕션 배포, 현재 구현 범위를 정리한 마스터 가이드입니다.
+본 문서는 **React (Frontend)** + **FastAPI (Backend)** 로 만든 Instagram 웹 애플리케이션의 로컬 개발 환경 구성, 프로덕션 배포, 현재 구현 범위를 정리한 마스터 가이드입니다. 데이터베이스는 로컬 SQLite, 서버 PostgreSQL이다.
 
 > **현재 상태 요약 (2026-10-07)**
 > - 백엔드: `backend.md`에 정리된 REST API가 전부 구현되어 있고, `https://tripastay.com`에 실제로 배포되어 정상 동작 중이다.
@@ -29,7 +29,7 @@ graph LR
     end
 
     subgraph Storage["Persistence & Files"]
-        DB[(SQLite3 DB WAL Mode)]
+        DB[(SQLite local / PostgreSQL server)]
         Disk[Local Static & Uploads]
     end
 
@@ -153,9 +153,11 @@ my_instagram/
    SECRET_KEY="instagram-clone-super-secret-key-change-in-production"
    ALGORITHM="HS256"
    ACCESS_TOKEN_EXPIRE_MINUTES=120
+   ENV=local
    DATABASE_URL="sqlite:///./instagram.db"
    ALLOWED_ORIGINS="http://localhost:5173,http://127.0.0.1:5173"
    ```
+   `ENV=local`(기본값)이면 SQLite를 쓰고, `ENV=production`이면 `DATABASE_URL`은 PostgreSQL이어야 한다. `postgresql://` 로 주면 드라이버는 `postgresql+psycopg`로 바뀐다.  
    `SECRET_KEY`를 비워두면 `app/core/config.py`의 하드코딩된 기본값(위 예시와 동일한 문자열)이 그대로 쓰인다 — 로컬 개발은 괜찮지만 **운영 환경에서는 반드시 랜덤 값으로 교체**해야 한다(7장 프로덕션 배포 참고). `ACCESS_TOKEN_EXPIRE_MINUTES`를 설정하지 않으면 코드 기본값은 7일(`60*24*7`)이다.
 
 5. **마이그레이션 적용 및 시딩 실행**:
@@ -321,7 +323,8 @@ PROJECT_NAME="Instagram Clone"
 SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=120
-DATABASE_URL="sqlite:////var/www/tripastay.com/backend/instagram.db"
+ENV=production
+DATABASE_URL="postgresql://instagram:password@127.0.0.1:5432/instagram"
 ALLOWED_ORIGINS="https://tripastay.com,https://www.tripastay.com"
 EOF
 
@@ -394,7 +397,20 @@ curl -s https://tripastay.com/ | grep -o "<title>.*</title>"          # <title>I
 ```
 브라우저에서 바뀐 게 안 보이면 거의 항상 **브라우저 캐시** 문제다 — 시크릿 창이나 하드 리프레시(`Ctrl+Shift+R`)로 먼저 확인한다.
 
-### 7.6. 다음 단계 (아직 안 함)
+### 7.6. 자동 배포
+`main`에 푸시하면 `.github/workflows/deploy.yml`이 서버(`/var/www/tripastay.com`)에서 `scripts/deploy.sh`를 실행한다. 스크립트는 `git pull`, 백엔드 패키지 설치, `alembic upgrade head`, 프론트 빌드, `instagram-clone-backend` 재시작만 한다. 서버의 `backend/.env`와 `frontend/.env`는 저장소에 없으므로 덮어쓰지 않는다.
+
+GitHub 저장소 Secrets에 다음 세 값을 넣어야 워크플로가 동작한다.
+
+| Secret | 값 |
+| :--- | :--- |
+| `DEPLOY_HOST` | 서버 공인 IP 또는 도메인 |
+| `DEPLOY_USER` | `ec2-user` |
+| `DEPLOY_SSH_KEY` | 해당 사용자로 접속하는 개인 키 전체 |
+
+서버의 `ec2-user`는 비밀번호 없이 `sudo systemctl restart instagram-clone-backend`를 실행할 수 있어야 한다. 저장소가 private이면 서버의 `git pull`용 인증도 따로 필요하다.
+
+### 7.7. 다음 단계 (아직 안 함)
 배포는 프론트 UI와 백엔드 API를 "같은 서버에 각자" 올려둔 상태다. 실제로 로그인/피드/업로드가 되게 하려면 `front.md` 7.2절의 프론트-백엔드 연동 작업이 필요하다.
 
 ---

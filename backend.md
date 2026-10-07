@@ -1,7 +1,7 @@
 # Instagram 클론 백엔드 개발 명세서 (backend.md)
 
-현재 프론트엔드 화면이 실제로 보여주는 기능만 서버와 SQLite에 구현한다.  
-개발 환경과 프로덕션 환경 모두 **SQLite 파일 하나**를 사용한다. 별도 RDBMS로 바꾸지 않는다.
+현재 프론트엔드 화면이 실제로 보여주는 기능만 서버에 구현한다.  
+로컬(`ENV=local`)은 **SQLite**, 서버(`ENV=production`)는 **PostgreSQL**이다. Alembic이 `DATABASE_URL`을 보고 같은 리비전을 해당 엔진에 적용한다.
 
 프론트는 React + Vite이며, 지금은 Zustand 목 데이터로 동작한다. 백엔드는 그 화면이 읽는 필드와 누르는 동작만 제공한다.
 
@@ -12,7 +12,7 @@
 > - 프로세스: systemd 서비스 `instagram-clone-backend` (`/etc/systemd/system/instagram-clone-backend.service`), `uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2`로 상시 구동, 장애 시 자동 재시작.
 > - 리버스 프록시: nginx(`/etc/nginx/conf.d/tripastay.com.conf`)가 `/api/`, `/uploads/`, `/static/`, `/docs`, `/redoc`, `/openapi.json`, `/health`을 `127.0.0.1:8000`으로 프록시. SSL은 기존 Certbot 인증서 사용.
 > - `backend/.env`의 `ALLOWED_ORIGINS`는 `https://tripastay.com,https://www.tripastay.com`. 다만 프론트와 백엔드가 같은 도메인으로 묶여 있어 현재는 CORS가 실제로 걸릴 일이 없다(프론트가 아직 호출을 안 하므로).
-> - DB 파일: `/var/www/tripastay.com/backend/instagram.db` (SQLite), `alembic upgrade head`로 생성.
+> - 서버 DB는 PostgreSQL이다. `ENV=production`과 `DATABASE_URL=postgresql://...`을 둔 뒤 `alembic upgrade head`로 스키마를 만든다. 이전에 배포된 SQLite 파일(`instagram.db`)은 이 설정에서 쓰지 않는다.
 
 ---
 
@@ -73,14 +73,14 @@
 | Server | Uvicorn | |
 | ORM | SQLAlchemy 2.0 | |
 | Schema | Pydantic v2 | |
-| DB | **SQLite** | 개발·프로덕션 동일 |
+| DB | **SQLite / PostgreSQL** | 로컬 SQLite, 서버 PostgreSQL. `ENV`로 선택 |
 | Password | passlib[bcrypt] | |
 | Token | python-jose | Access Token만 (Bearer, 유효 7일) |
 | Image | Pillow | JPEG/PNG/WEBP/HEIC → WebP |
 | Upload | python-multipart | |
 
-`DATABASE_URL` 예: `sqlite:///./instagram.db`  
-환경이 달라도 엔진 종류는 SQLite로 고정하고, 파일 경로만 바꾼다.
+로컬 `DATABASE_URL` 예: `sqlite:///./instagram.db`  
+서버 예: `postgresql://user:password@127.0.0.1:5432/instagram` (`ENV=production`)
 
 연결 시 반드시 실행한다.
 

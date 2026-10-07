@@ -1,6 +1,6 @@
 # 📸 Instagram 클론 데이터베이스 설계 명세서 (db.md)
 
-본 문서는 SQLite를 기반으로 하는 Instagram 풀스택 클론 프로젝트의 데이터베이스 설계 및 스키마 명세서입니다.  
+본 문서는 Instagram 풀스택 클론의 데이터베이스 설계 및 스키마 명세서입니다. 로컬은 SQLite, 서버는 PostgreSQL이며 스키마는 Alembic 리비전 하나로 맞춘다.  
 ORM으로는 Python의 **SQLAlchemy 2.0 (Declarative Base)**을 기준 모델로 정의하며, 마이그레이션 도구로 **Alembic**을 사용합니다.
 
 ---
@@ -9,10 +9,9 @@ ORM으로는 Python의 **SQLAlchemy 2.0 (Declarative Base)**을 기준 모델로
 
 ## 1. 개요 및 설계 원칙
 
-1. **RDBMS**: SQLite3 (파일 기반 경량 DB). 개발·프로덕션 동일 파일 기반 엔진을 쓰고, 경로만 다르다.
-   - `PRAGMA foreign_keys = ON;` 필수 활성화 (외래 키 무결성 보장)
-   - `PRAGMA journal_mode = WAL;` (Write-Ahead Logging 모드로 동시 읽기/쓰기 성능 최적화)
-   - 두 PRAGMA는 `backend/app/core/database.py`의 SQLAlchemy `Engine` `connect` 이벤트에서 매 연결마다 실행된다.
+1. **RDBMS**: 로컬은 SQLite3, 서버는 PostgreSQL. `ENV=local`이면 SQLite, `ENV=production`이면 PostgreSQL `DATABASE_URL`이 필수다.
+   - SQLite만 `PRAGMA foreign_keys = ON;`, `PRAGMA journal_mode = WAL;`을 연결마다 실행한다.
+   - PostgreSQL은 같은 규칙을 plpgsql 트리거로 적용한다. SQLite 트리거 문법은 서버에서 실행하지 않는다.
 2. **네이밍 규칙**:
    - 테이블명: 복수형 스네이크 케이스 (예: `users`, `posts`, `comments`)
    - 기본 키(PK): `id` (정수형 Auto-Increment). `chat_participants`, `story_views`는 복합 PK.
@@ -381,31 +380,12 @@ Index("uq_users_email_lower", func.lower(User.email), unique=True)
 
 ## 6. SQLite 설정 및 최적화 가이드
 
-### 6.1. 외래 키 활성화 이벤트 리스너
-SQLite는 기본적으로 외래 키 제약 조건을 강제하지 않으므로, SQLAlchemy 세션 엔진 생성 시 아래 리스너를 반드시 등록합니다:
-
-```python
-from sqlalchemy import create_engine, event
-from sqlalchemy.engine import Engine
-
-SQLALCHEMY_DATABASE_URL = "sqlite:///./instagram.db"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
-
-@event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.close()
-```
+### 6.1. 엔진 선택
+`ENV=local`이면 `sqlite:///./instagram.db`를 쓴다. `ENV=production`이면 `DATABASE_URL`이 `postgresql://`로 시작해야 하며, 드라이버는 `postgresql+psycopg`로 맞춘다. SQLite 엔진에만 `PRAGMA foreign_keys=ON`과 `PRAGMA journal_mode=WAL`을 건다.
 
 ### 6.2. 마이그레이션 (Alembic)
-실제 적용된 마이그레이션은 1개뿐이다: `backend/alembic/versions/689ee5412b5f_initial_instagram_schema.py` (13개 테이블 + CHECK + 인덱스 + 트리거를 한 번에 생성).
+실제 적용된 마이그레이션은 1개뿐이다: `backend/alembic/versions/689ee5412b5f_initial_instagram_schema.py` (13개 테이블 + CHECK + 인덱스 + 트리거를 한 번에 생성). 같은 리비전이 접속 중인 엔진을 보고 SQLite 트리거 또는 PostgreSQL 함수를 만든다. `render_as_batch`는 SQLite에서만 켠다.
 
 1. 적용: `alembic upgrade head` (앱 시작 시 `main.py` → `init_db()`가 자동 실행)
 2. 새 변경 생성: `alembic revision --autogenerate -m "설명"`
-3. 프로덕션(`/var/www/tripastay.com/backend`)에서는 `venv/bin/alembic upgrade head`로 실행했다 (`backend/.env`의 `DATABASE_URL`을 읽음).
+3. 서버에서는 `ENV=production`과 PostgreSQL `DATABASE_URL`을 둔 뒤 `alembic upgrade head`를 실행한다.

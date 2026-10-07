@@ -1,0 +1,18 @@
+{
+  "name": "my-instagram-clone",
+  "version": "1.0.0",
+  "description": "Instagram Fullstack Clone (FastAPI + React 18 + Vite)",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --prefix-colors \"bgBlue.bold,bgMagenta.bold\" --names \"BACKEND ,FRONTEND\" \"node start-backend.mjs\" \"npm run dev --prefix frontend\"",
+    "start": "python run.py",
+    "backend": "node start-backend.mjs",
+    "frontend": "npm run dev --prefix frontend",
+    "setup": "python run.py --setup-only",
+    "seed": "python backend/seed.py",
+    "install:all": "npm install && npm install --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

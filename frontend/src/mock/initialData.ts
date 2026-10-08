@@ -27,9 +27,9 @@ export const sampleUsers: Record<string, User> = {
   admin: {
     id: 1,
     username: 'admin',
-    full_name: 'Instagram 관리자',
+    full_name: 'Muksta 관리자',
     email: 'admin@instagram.com',
-    bio: 'React 18 + FastAPI 풀스택 Instagram 클론 🚀\n아름다운 인터랙티브 경험을 만듭니다 ✨',
+    bio: 'React 18 + FastAPI 풀스택 Muksta 🚀\n아름다운 인터랙티브 경험을 만듭니다 ✨',
     website: 'https://github.com/developer',
     profile_img_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
     is_verified: true,

@@ -1,4 +1,4 @@
-# Instagram 클론 백엔드 개발 명세서 (backend.md)
+# Muksta 백엔드 개발 명세서 (backend.md)
 
 현재 프론트엔드 화면이 실제로 보여주는 기능만 서버에 구현한다.  
 로컬(`ENV=local`)은 **SQLite**, 서버(`ENV=production`)는 **PostgreSQL**이다. Alembic이 `DATABASE_URL`을 보고 같은 리비전을 해당 엔진에 적용한다.

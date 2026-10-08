@@ -1,6 +1,6 @@
-# 📸 Instagram 클론 데이터베이스 설계 명세서 (db.md)
+# 📸 Muksta 데이터베이스 설계 명세서 (db.md)
 
-본 문서는 Instagram 풀스택 클론의 데이터베이스 설계 및 스키마 명세서입니다. 로컬은 SQLite, 서버는 PostgreSQL이며 스키마는 Alembic 리비전 하나로 맞춘다.  
+본 문서는 Muksta 풀스택 프로젝트의 데이터베이스 설계 및 스키마 명세서입니다. 로컬은 SQLite, 서버는 PostgreSQL이며 스키마는 Alembic 리비전 하나로 맞춘다.  
 ORM으로는 Python의 **SQLAlchemy 2.0 (Declarative Base)**을 기준 모델로 정의하며, 마이그레이션 도구로 **Alembic**을 사용합니다.
 
 ---

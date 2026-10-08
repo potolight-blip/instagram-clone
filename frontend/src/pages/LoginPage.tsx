@@ -41,11 +41,11 @@ export const LoginPage: React.FC = () => {
             <div className="w-full h-full rounded-[30px] overflow-hidden relative">
               <img
                 src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop&q=80"
-                alt="Instagram 미리보기"
+                alt="Muksta 미리보기"
                 className="w-full h-full object-cover animate-pulse [animation-duration:10s]"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 flex flex-col justify-between p-4">
-                <div className="text-white font-bold text-lg font-serif">Instagram</div>
+                <div className="text-white font-bold text-lg font-serif">Muksta</div>
                 <div className="text-white text-xs space-y-1">
                   <p className="font-semibold">@traveler_june</p>
                   <p className="text-neutral-300">빛나는 일상의 순간을 함께 나누세요.</p>
@@ -58,9 +58,9 @@ export const LoginPage: React.FC = () => {
         {/* Right Side: Login Form Card */}
         <div className="w-full max-w-[350px] flex flex-col space-y-3">
           <div className="bg-black border border-[#262626] rounded-xl p-8 flex flex-col items-center">
-            {/* Instagram Logo */}
+            {/* Muksta Logo */}
             <h1 className="text-3xl font-extrabold text-white mb-8 tracking-tight font-serif">
-              Instagram
+              Muksta
             </h1>
 
             {error && (

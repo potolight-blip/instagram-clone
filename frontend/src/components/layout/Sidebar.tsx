@@ -105,7 +105,7 @@ export const Sidebar: React.FC = () => {
                 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
               >
                 <span className="bg-gradient-to-r from-white via-neutral-200 to-white bg-clip-text text-transparent font-extrabold tracking-tight text-2xl">
-                  Instagram
+                  Muksta
                 </span>
               </NavLink>
 

@@ -56,7 +56,7 @@ export const SignupPage: React.FC = () => {
       <div className="w-full max-w-[350px] flex flex-col space-y-3">
         <div className="bg-black border border-[#262626] rounded-xl p-8 flex flex-col items-center text-center">
           <h1 className="text-3xl font-extrabold text-white mb-3 tracking-tight font-serif">
-            Instagram
+            Muksta
           </h1>
           <p className="text-sm font-semibold text-neutral-400 mb-5 leading-snug">
             친구들의 사진과 동영상을 보려면 가입하세요.
@@ -102,7 +102,7 @@ export const SignupPage: React.FC = () => {
             />
 
             <p className="text-[10px] text-neutral-500 text-center py-2 leading-relaxed">
-              가입하면 Instagram의 약관, 데이터 정책 및 쿠키 정책에 동의하게 됩니다.
+              가입하면 Muksta의 약관, 데이터 정책 및 쿠키 정책에 동의하게 됩니다.
             </p>
 
             <button

@@ -1,6 +1,6 @@
-# 🎨 Instagram 클론 프론트엔드 명세서 (front.md)
+# 🎨 Muksta 프론트엔드 명세서 (front.md)
 
-본 문서는 React와 Vite를 기반으로 하는 Instagram 웹 애플리케이션의 사용자 인터페이스(UI), 사용자 경험(UX), 상태 관리, 컴포넌트 아키텍처 명세서입니다.
+본 문서는 React와 Vite를 기반으로 하는 Muksta 웹 애플리케이션의 사용자 인터페이스(UI), 사용자 경험(UX), 상태 관리, 컴포넌트 아키텍처 명세서입니다.
 
 > **현재 연동 상태 (2026-10-07 기준)**: 프론트엔드는 `backend.md`에서 설명하는 FastAPI 서버와 **아직 연동되어 있지 않다.** 모든 화면은 `src/mock/initialData.ts`의 정적 목(mock) 데이터를 `Zustand` 스토어에 그대로 올려 동작하며, 좋아요·댓글·북마크·새 게시물 등 모든 상호작용은 브라우저 메모리에서만 상태를 바꾼다. 새로고침하면 초기 목 데이터로 되돌아간다. 로그인(`LoginPage`)도 실제 인증 요청 없이 `mock/initialData.ts`의 `TEST_CREDENTIALS`와 입력값을 비교해 통과시키고, 토큰 자리에는 고정 문자열 `'mock-jwt-token-xyz'`를 넣는다. `axios`가 `package.json` 의존성에는 있지만 코드에서 실제로 `import`해 쓰는 곳은 없다. 백엔드 API와 실제로 통신하도록 교체하는 작업(Axios 인스턴스, API 훅, 로그인/피드/업로드 연동 등)은 아직 하지 않았다.
 
@@ -15,7 +15,7 @@
 | **Routing** | React Router DOM | 7.18 | 클라이언트 사이드 라우팅 |
 | **Styling** | Tailwind CSS 4 (`@tailwindcss/postcss`) + Vanilla CSS | 4.3 | 유틸리티 스타일링 및 커스텀 애니메이션 |
 | **Client State** | Zustand (+ `persist` 미들웨어) | 5.0 | 인증·모달·게시물·설정 상태를 전부 로컬에서 관리 |
-| **Icons** | Lucide React | 1.50 | Instagram 스타일 모던 라인 아이콘 셋 |
+| **Icons** | Lucide React | 1.50 | Muksta UI에 맞춘 모던 라인 아이콘 셋 |
 | **Date** | date-fns | 4.4 | 상대 시간 표기 ("방금 전", "3시간 전") |
 | **기타** | clsx | 2.1 | 조건부 클래스네임 조합 |
 | **설치되어 있으나 미사용** | axios | 1.20 | 의존성에만 존재, 실제 API 호출 코드 없음 |
@@ -27,7 +27,7 @@ TanStack Query, WebSocket 클라이언트는 설치되어 있지 않다. 서버 
 
 ## 2. 디자인 시스템 및 시각적 가이드라인
 
-Instagram 공식 디자인 철학을 철저하게 계승하며 다크 모드를 기본 지원합니다.
+Muksta만의 디자인 원칙을 따르며 다크 모드를 기본 지원합니다.
 
 ### 2.1. 컬러 팔레트 (Design Tokens)
 - **Primary Accent**: `#0095F6` (인스타그램 시그니처 인디고 블루 - 팔로우, 게시 버튼)

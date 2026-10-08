@@ -51,7 +51,7 @@ export const HomePage: React.FC = () => {
           <a href="#" className="hover:underline">언어</a>
         </div>
         <div className="mt-3 text-neutral-600 font-medium">
-          © 2026 Instagram · Meta 제공
+          © 2026 Muksta
         </div>
       </footer>
     </div>

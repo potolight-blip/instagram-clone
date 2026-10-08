@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title Instagram Clone Launcher
+title Muksta Launcher
 cd /d "%~dp0"
 
 echo ========================================================
-echo   📸 Instagram Clone - One-Click Launcher
+echo   📸 Muksta - One-Click Launcher
 echo   FastAPI (8000) + React Vite (5173)
 echo ========================================================
 echo.

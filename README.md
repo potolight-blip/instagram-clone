@@ -1,6 +1,6 @@
-# 📸 Instagram Full-Stack Clone (인스타그램 클론)
+# 📸 Muksta Full-Stack (인스타그램 클론)
 
-Instagram 클론 프로젝트는 **React 18 + Vite** 프론트엔드와 **FastAPI + SQLAlchemy** 백엔드로 구성된 풀스택 소셜 네트워크 서비스입니다. 로컬 데이터베이스는 SQLite, 서버는 PostgreSQL입니다.  
+Muksta 프로젝트는 **React 18 + Vite** 프론트엔드와 **FastAPI + SQLAlchemy** 백엔드로 구성된 풀스택 소셜 네트워크 서비스입니다. 로컬 데이터베이스는 SQLite, 서버는 PostgreSQL입니다.  
 이번 단계에서는 요청에 따라 **프론트엔드 중심**으로 인스타그램의 모든 시각적 완성도와 마이크로 인터랙션을 완벽하게 구현하였습니다.
 
 ---

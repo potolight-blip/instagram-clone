@@ -50,7 +50,7 @@ body {
   background: #3f3f3f;
 }
 
-/* Instagram Story Ring */
+/* Muksta Story Ring */
 .story-ring-unseen {
   background: var(--story-gradient);
   padding: 2.5px;
@@ -69,7 +69,7 @@ body {
   display: inline-block;
 }
 
-/* Instagram Double Tap Heart Pop */
+/* Muksta Double Tap Heart Pop */
 @keyframes heartBurst {
   0% {
     transform: scale(0);

@@ -69,7 +69,7 @@ export const HelpCenterPage: React.FC = () => {
 export const PrivacyPolicyPage: React.FC = () => (
   <SettingsShell title="개인정보처리방침">
     <article className="text-sm text-neutral-300 leading-relaxed space-y-4">
-      <p>Instagram 클론은 데모 서비스이며, 입력한 정보는 브라우저와 로컬 SQLite에만 저장됩니다.</p>
+      <p>Muksta는 데모 서비스이며, 입력한 정보는 브라우저와 로컬 SQLite에만 저장됩니다.</p>
       <p>수집 항목: 사용자 이름, 이메일, 프로필 소개, 업로드한 사진, 댓글, 메시지.</p>
       <p>이용 목적: 로그인, 피드 표시, 알림, 다이렉트 메시지 기능 제공.</p>
       <p>보관 기간: 계정을 삭제하거나 브라우저 데이터를 지우면 삭제됩니다. 외부 광고 네트워크와 공유하지 않습니다.</p>
@@ -81,7 +81,7 @@ export const PrivacyPolicyPage: React.FC = () => (
 export const TermsPage: React.FC = () => (
   <SettingsShell title="약관">
     <article className="text-sm text-neutral-300 leading-relaxed space-y-4">
-      <p>본 서비스는 Instagram을 참고한 학습용 클론이며 Meta와 제휴되어 있지 않습니다.</p>
+      <p>Muksta는 학습용으로 만든 데모 서비스이며 Meta를 비롯한 다른 기업과 제휴되어 있지 않습니다.</p>
       <p>사용자는 타인의 권리를 침해하는 콘텐츠를 게시해서는 안 됩니다. 사진만 게시할 수 있으며 동영상 업로드는 지원하지 않습니다.</p>
       <p>계정은 본인이 관리해야 하며, 비밀번호를 다른 사람과 공유하지 마세요.</p>
       <p>데모 데이터는 예고 없이 초기화될 수 있습니다.</p>

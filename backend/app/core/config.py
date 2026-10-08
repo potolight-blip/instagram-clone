@@ -17,7 +17,7 @@ def _normalize_database_url(url: str) -> str:
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Instagram 클론"
+    PROJECT_NAME: str = "Muksta"
     SECRET_KEY: str = "instagram-clone-super-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7

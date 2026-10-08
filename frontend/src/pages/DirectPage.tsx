@@ -108,7 +108,7 @@ export const DirectPage: React.FC = () => {
                   {activeRoom.participant.full_name || activeRoom.participant.username}
                 </h4>
                 <p className="text-xs text-neutral-400 mt-1">
-                  @{activeRoom.participant.username} • Instagram
+                  @{activeRoom.participant.username} • Muksta
                 </p>
                 <button
                   onClick={() => alert('프로필 보기')}

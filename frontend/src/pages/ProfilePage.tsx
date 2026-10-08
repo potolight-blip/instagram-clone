@@ -49,7 +49,7 @@ export const ProfilePage: React.FC = () => {
     : sampleUsers[username || ''] || {
         id: 99,
         username: username || 'user',
-        full_name: 'Instagram 사용자',
+        full_name: 'Muksta 사용자',
         profile_img_url:
           'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&auto=format&fit=crop&q=80',
         post_count: 12,

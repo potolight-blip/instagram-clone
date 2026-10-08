@@ -14,7 +14,7 @@ export const TopHeader: React.FC = () => {
   return (
     <header className="fixed top-0 left-0 right-0 h-[44px] bg-black border-b border-[#262626] z-30 flex items-center justify-between px-4 sm:hidden">
       <NavLink to="/" className="text-xl font-bold tracking-tight text-white font-serif">
-        <span className="font-extrabold tracking-tight">Instagram</span>
+        <span className="font-extrabold tracking-tight">Muksta</span>
       </NavLink>
 
       <div className="flex items-center space-x-4">

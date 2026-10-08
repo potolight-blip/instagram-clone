@@ -1,6 +1,6 @@
-# 📘 Instagram 클론 전체 프로젝트 가이드 (guide.md)
+# 📘 Muksta 전체 프로젝트 가이드 (guide.md)
 
-본 문서는 **React (Frontend)** + **FastAPI (Backend)** 로 만든 Instagram 웹 애플리케이션의 로컬 개발 환경 구성, 프로덕션 배포, 현재 구현 범위를 정리한 마스터 가이드입니다. 데이터베이스는 로컬 SQLite, 서버 PostgreSQL이다.
+본 문서는 **React (Frontend)** + **FastAPI (Backend)** 로 만든 Muksta 웹 애플리케이션의 로컬 개발 환경 구성, 프로덕션 배포, 현재 구현 범위를 정리한 마스터 가이드입니다. 데이터베이스는 로컬 SQLite, 서버 PostgreSQL이다.
 
 > **현재 상태 요약 (2026-10-07)**
 > - 백엔드: `backend.md`에 정리된 REST API가 전부 구현되어 있고, `https://tripastay.com`에 실제로 배포되어 정상 동작 중이다.
@@ -14,7 +14,7 @@
 ```mermaid
 graph LR
     subgraph Client["Frontend (React + Vite)"]
-        UI[Instagram UI / Components]
+        UI[Muksta UI / Components]
         Store[Zustand Store (Auth/Modal)]
         TQuery[TanStack Query (Cache/Sync)]
         WSClient[WebSocket Client (DM)]
@@ -149,7 +149,7 @@ my_instagram/
 
 4. **환경 변수 파일 생성 (`backend/.env`, `backend/.env.example` 복사)**:
    ```env
-   PROJECT_NAME="Instagram Clone"
+   PROJECT_NAME="Muksta"
    SECRET_KEY="instagram-clone-super-secret-key-change-in-production"
    ALGORITHM="HS256"
    ACCESS_TOKEN_EXPIRE_MINUTES=120
@@ -245,7 +245,7 @@ my_instagram/
 
 ```mermaid
 timeline
-    title Instagram 클론 개발 로드맵
+    title Muksta 개발 로드맵
     Phase 1 : 기반 설정 및 인증 : SQLite 모델 구축 : 회원가입 및 JWT 로그인 : 사이드바 레이아웃
     Phase 2 : 게시물 & 피드 : 미디어 업로드 파이프라인 (Pillow) : 피드 카드 및 다중 이미지 슬라이더 : 무한 스크롤
     Phase 3 : 소셜 인터랙션 : 더블 탭 좋아요 애니메이션 : 댓글/대댓글 트리 : 북마크 & 팔로우/언팔로우
@@ -319,7 +319,7 @@ venv/bin/pip install -r requirements.txt
 
 # .env — SECRET_KEY는 매번 새로 생성, ALLOWED_ORIGINS는 실제 도메인
 cat > .env <<EOF
-PROJECT_NAME="Instagram Clone"
+PROJECT_NAME="Muksta"
 SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=120
@@ -334,7 +334,7 @@ venv/bin/alembic upgrade head
 systemd 서비스로 등록 (`/etc/systemd/system/instagram-clone-backend.service`):
 ```ini
 [Unit]
-Description=Instagram Clone FastAPI backend
+Description=Muksta FastAPI backend
 After=network.target
 
 [Service]
@@ -393,7 +393,7 @@ sudo nginx -t && sudo systemctl reload nginx
 ```bash
 curl -s https://tripastay.com/health                 # {"status":"ok",...}
 curl -s -o /dev/null -w "%{http_code}\n" https://tripastay.com/docs   # 200
-curl -s https://tripastay.com/ | grep -o "<title>.*</title>"          # <title>Instagram</title>
+curl -s https://tripastay.com/ | grep -o "<title>.*</title>"          # <title>Muksta</title>
 ```
 브라우저에서 바뀐 게 안 보이면 거의 항상 **브라우저 캐시** 문제다 — 시크릿 창이나 하드 리프레시(`Ctrl+Shift+R`)로 먼저 확인한다.
 

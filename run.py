@@ -20,7 +20,7 @@ DB_FILE = os.path.join(BACKEND_DIR, "instagram.db")
 
 def print_banner():
     print("=" * 60)
-    print("  📸 Instagram Clone - One-Click Launcher")
+    print("  📸 Muksta - One-Click Launcher")
     print("  Backend (FastAPI) + Frontend (React 18 + Vite)")
     print("=" * 60)
 

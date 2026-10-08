@@ -1,40 +1,54 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
+APP_DIR="/var/www/muksta"
+BRANCH="main"
 
-git fetch origin main
-git checkout -f main
-git reset --hard origin/main
+step() { echo; echo "==> $*"; }
 
-cd "$ROOT/backend"
-if [[ ! -f .env ]]; then
-  echo "backend/.env is missing. Create it on the server before deploying."
+# Non-interactive SSH shells skip nvm setup, so pm2/npm may be missing from PATH.
+if ! command -v pm2 >/dev/null 2>&1 && [[ -s "$HOME/.nvm/nvm.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "$HOME/.nvm/nvm.sh"
+fi
+
+cd "$APP_DIR"
+if [[ ! -d .git ]]; then
+  echo "$APP_DIR is not a git repository. Clone the project there first."
   exit 1
 fi
 
-if [[ ! -x venv/bin/python ]] || ! venv/bin/python -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'; then
-  rm -rf venv
-  python3.11 -m venv venv
-fi
-venv/bin/pip install -r requirements.txt
-venv/bin/alembic upgrade head
+step "git pull origin $BRANCH"
+git pull --ff-only origin "$BRANCH"
 
-cd "$ROOT/frontend"
-node_major="$(node -p "process.versions.node.split('.')[0]")"
-if [[ "$node_major" -lt 20 ]]; then
-  echo "Node.js 20 or newer is required. Found $(node -v)."
-  exit 1
+step "pip install -r backend/requirements.txt"
+VENV=""
+for dir in backend/venv backend/.venv venv .venv; do
+  if [[ -x "$dir/bin/python" ]]; then
+    VENV="$dir"
+    break
+  fi
+done
+if [[ -z "$VENV" ]]; then
+  VENV="backend/venv"
+  PYTHON="$(command -v python3.11 || command -v python3)"
+  "$PYTHON" -m venv "$VENV"
 fi
-if [[ ! -f .env ]]; then
-  cat > .env <<'EOF'
-VITE_API_BASE_URL=https://tripastay.com/api/v1
-VITE_STATIC_BASE_URL=https://tripastay.com
-VITE_WS_BASE_URL=wss://tripastay.com/ws
-EOF
-fi
-npm ci
-npm run build
+VENV="$APP_DIR/$VENV"
+"$VENV/bin/pip" install -r backend/requirements.txt
 
-sudo -n systemctl restart instagram-clone-backend
+step "alembic upgrade head"
+(cd backend && "$VENV/bin/alembic" upgrade head)
+
+if [[ -f frontend/package.json ]]; then
+  step "frontend build"
+  (cd frontend && npm ci && npm run build)
+fi
+
+step "pm2 restart all"
+pm2 restart all
+pm2 save
+pm2 status
+
+echo
+echo "Deploy finished: $(git rev-parse --short HEAD)"

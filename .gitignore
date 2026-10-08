@@ -14,3 +14,4 @@ uploads/
 .DS_Store
 .idea/
 .vscode/
+/deploy.sh

@@ -398,17 +398,17 @@ curl -s https://tripastay.com/ | grep -o "<title>.*</title>"          # <title>I
 브라우저에서 바뀐 게 안 보이면 거의 항상 **브라우저 캐시** 문제다 — 시크릿 창이나 하드 리프레시(`Ctrl+Shift+R`)로 먼저 확인한다.
 
 ### 7.6. 자동 배포
-`main`에 푸시하거나 Actions에서 수동 실행하면 `.github/workflows/deploy.yml`이 서버(`/var/www/tripastay.com`)를 `origin/main`에 맞춘 뒤 `scripts/deploy.sh`를 실행한다. 스크립트는 추적 중인 파일을 다시 `origin/main`으로 맞추고, 백엔드 패키지 설치, `alembic upgrade head`, `npm ci`, 프론트 빌드, `instagram-clone-backend` 재시작만 한다. 서버의 `backend/.env`, `frontend/.env`, `venv`, `uploads`는 저장소에 없으므로 지워지지 않는다. `backend/.env`가 없으면 배포는 중단된다. `frontend/.env`가 없으면 `https://tripastay.com` 주소로 새로 만든다.
+`main`에 푸시하거나 Actions에서 수동 실행하면 `.github/workflows/deploy.yml`이 `scripts/deploy.sh`를 서버의 `/var/www/muksta/deploy.sh`로 복사한 뒤 실행한다. 그래서 첫 배포 때 서버에 `deploy.sh`가 없어도 자동으로 생기고, 이후에도 저장소 버전으로 갱신된다. 스크립트는 `git pull --ff-only origin main`, `pip install -r backend/requirements.txt`, `alembic upgrade head`, 프론트 빌드(`frontend/package.json`이 있을 때), `pm2 restart all` 순서로 실행한다. 어느 단계든 실패하면 즉시 멈추고 Actions에 실패로 표시된다.
 
 GitHub 저장소 Secrets에 다음 세 값을 넣어야 워크플로가 동작한다.
 
 | Secret | 값 |
 | :--- | :--- |
-| `DEPLOY_HOST` | 서버 공인 IP 또는 도메인 |
-| `DEPLOY_USER` | `ec2-user` |
-| `DEPLOY_SSH_KEY` | 해당 사용자로 접속하는 개인 키 전체 |
+| `SERVER_HOST` | 서버 공인 IP 또는 도메인 |
+| `SERVER_USER` | 서버 접속 사용자 (예: `ubuntu`, `ec2-user`) |
+| `SERVER_SSH_KEY` | 해당 사용자로 접속하는 개인 키 전체 |
 
-서버의 `ec2-user`는 비밀번호 없이 `sudo -n systemctl restart instagram-clone-backend`를 실행할 수 있어야 한다. 저장소가 private이면 서버의 `git pull`용 인증도 따로 필요하다.
+`/var/www/muksta`는 이 저장소를 clone한 폴더여야 하고, `SERVER_USER`에게 쓰기 권한이 있어야 한다. PM2도 같은 사용자로 실행 중이어야 한다. 저장소가 private이면 서버의 `git pull`용 인증도 따로 필요하다.
 
 ### 7.7. 다음 단계 (아직 안 함)
 배포는 프론트 UI와 백엔드 API를 "같은 서버에 각자" 올려둔 상태다. 실제로 로그인/피드/업로드가 되게 하려면 `front.md` 7.2절의 프론트-백엔드 연동 작업이 필요하다.

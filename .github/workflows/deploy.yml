@@ -13,27 +13,53 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      APP_DIR: /var/www/muksta
     steps:
-      - name: Update the server
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
         run: |
-          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ] || [ -z "$DEPLOY_SSH_KEY" ]; then
-            echo "Deploy secrets are missing. Set DEPLOY_HOST, DEPLOY_USER, and DEPLOY_SSH_KEY."
+          if [ -z "$SERVER_HOST" ] || [ -z "$SERVER_USER" ] || [ -z "$SERVER_SSH_KEY" ]; then
+            echo "::error::Secrets are missing. Set SERVER_HOST, SERVER_USER, and SERVER_SSH_KEY."
             exit 1
           fi
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
-          if ! grep -q "PRIVATE KEY" ~/.ssh/deploy_key; then
-            printf '%b\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
-          fi
+          printf '%s\n' "$SERVER_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          trap 'rm -f ~/.ssh/deploy_key' EXIT
-          ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=accept-new \
-            -o IdentitiesOnly=yes \
-            "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cd /var/www/tripastay.com && git fetch origin main && git checkout -f main && git reset --hard origin/main && bash scripts/deploy.sh"
+
+      - name: Upload deploy.sh to the server
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes \
+            scripts/deploy.sh "$SERVER_USER@$SERVER_HOST:$APP_DIR/deploy.sh"
+
+      - name: Run deploy.sh on the server
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes \
+            "$SERVER_USER@$SERVER_HOST" "bash -l $APP_DIR/deploy.sh"
+
+      - name: Report success
+        if: success()
+        run: echo "### Deploy succeeded (${GITHUB_SHA::7})" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report failure
+        if: failure()
+        run: |
+          echo "### Deploy failed (${GITHUB_SHA::7})" >> "$GITHUB_STEP_SUMMARY"
+          echo "Open the failed step above to see the server log." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
